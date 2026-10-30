@@ -18,10 +18,17 @@ Thanks for helping make shortcut tooling less painful. This project is small on 
 
    ```bash
    py scripts/test_lint.py
+   py scripts/check_encoding.py
    py scripts/build_shortcut.py assets/example-hello.json -o "output/Hello You.shortcut"
    py scripts/build_shortcut.py examples/post-clipboard.json -o "output/Post Clipboard.shortcut"
    py scripts/validate_shortcut.py "output/Post Clipboard.shortcut" --target ios --min-os 26
    ```
+
+   **Edit files as UTF-8.** `check_encoding.py` fails the build if a text file
+   is double-encoded — for example when a UTF-8 file is read as Windows-1252
+   and written back, which turns `—` into `â€"` and renders as mojibake on
+   GitHub. It looks fine in a diff and in every test; only the rendered page
+   shows the damage. Write files with a UTF-8-aware editor, and keep LF endings.
 
 4. If you touched the broken-fixture spec, regenerate it: `py scripts/make_fixture.py`.
 5. Open a PR describing the bug or rule, the failing case it catches, and the before/after lint output.

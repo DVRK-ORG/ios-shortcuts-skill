@@ -99,6 +99,7 @@ with zero dependencies. Only signing and on-device testing need Apple hardware.
 | `scripts/inspect_shortcut.py` | Human-readable numbered action dump; `--json` for the raw plist. |
 | `scripts/fix_shortcut.py` | Provably-safe machine repairs only (math operators, unambiguous token offsets, icon colour). Never re-binds variables, and refuses to write while design errors remain. |
 | `scripts/test_lint.py` | Proves the linter catches every failure mode it claims (49 checks). Run after changing rules. |
+| `scripts/check_encoding.py` | Verifies every text file is clean UTF-8 with LF endings (catches double-encoded files that render as mojibake). |
 | `scripts/make_fixture.py` | Regenerates the deliberately-broken demo fixture (deterministic — byte-identical every run). |
 | `scripts/shortcut_lib.py` | Spec engine: token strings, control flow, typed convenience actions. |
 

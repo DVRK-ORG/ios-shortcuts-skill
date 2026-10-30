@@ -69,6 +69,17 @@ jobs:
           fi
           echo "fixer correctly refused to write"
 
+  encoding:
+    name: text files are clean UTF-8
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: No double-encoded UTF-8, no BOM, no CRLF
+        run: python scripts/check_encoding.py
+
   lint-rules:
     name: lint rules are documented
     runs-on: ubuntu-latest

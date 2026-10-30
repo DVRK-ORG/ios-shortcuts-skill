@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="iOS Shortcuts Skill â€” build, lint, debug and ship Apple Shortcuts from any agent, on any OS" width="100%">
+<img src="docs/banner.png" alt="iOS Shortcuts Skill — build, lint, debug and ship Apple Shortcuts from any agent, on any OS" width="100%">
 
 # iOS Shortcuts Skill
 
-**Build, lint, debug, and ship Apple Shortcuts from any AI agent â€” on any OS, including Windows.**
+**Build, lint, debug, and ship Apple Shortcuts from any AI agent — on any OS, including Windows.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
@@ -19,11 +19,11 @@
 ---
 
 <div align="center">
-  <sub>Built by <a href="https://github.com/DVRK-ORG">DVRK-ORG</a> Â· Published as an <a href="https://agentskills.io">Agent Skill</a></sub>
+  <sub>Built by <a href="https://github.com/DVRK-ORG">DVRK-ORG</a> · Published as an <a href="https://agentskills.io">Agent Skill</a></sub>
 </div>
 
 
-Most shortcut generators hand you a `.shortcut` file and wish you luck. This skill does the opposite: it **lints before it ships**, explains *why* a shortcut fails in coded, actionable findings, and is honest about the one step that truly needs a Mac â€” signing.
+Most shortcut generators hand you a `.shortcut` file and wish you luck. This skill does the opposite: it **lints before it ships**, explains *why* a shortcut fails in coded, actionable findings, and is honest about the one step that truly needs a Mac — signing.
 
 ## Why this skill?
 
@@ -31,19 +31,19 @@ Most shortcut generators hand you a `.shortcut` file and wish you luck. This ski
 |---|---|---|
 | Wrong parameter key | Imports fine, field shows empty on device | `E_INPUT_KEY` catches it before shipping |
 | macOS-only action on iPhone | "Works on my Mac, not my phone" mystery | Target-diff: lint `--target ios` vs `--target macos`, the diff *is* the diagnosis |
-| Bad token offset | Variable renders as literal `ï¿¼` or empty | Builder computes UTF-16 offsets for you; linter verifies them |
-| ASCII `/` instead of `Ã·` | Division silently becomes addition | `E_MATH_OP` + safe auto-fix |
+| Bad token offset | Variable renders as literal `￼` or empty | Builder computes UTF-16 offsets for you; linter verifies them |
+| ASCII `/` instead of `÷` | Division silently becomes addition | `E_MATH_OP` + safe auto-fix |
 | No Mac available | Tools promise an importable file anyway | Honest path: build recipe or signing hand-off, stated up front |
 | Unclosed If block | Everything after it corrupts | `E_UNCLOSED_GROUP` with the exact group |
 
 ## Highlights
 
-- **Zero dependencies** â€” Python 3 standard library only. No `pip install`, no Node, no Xcode.
-- **Runs anywhere** â€” Windows, macOS, Linux. Build and lint on Windows; sign on any Mac.
-- **Coded lint findings** â€” stable `E_*` / `W_*` / `I_*` codes with `--json` output for agents and CI.
-- **Target- and OS-aware** â€” `--target ios|macos|both`, `--min-os 26|27` gating for platform- and version-only actions.
-- **Conservative fixer** â€” repairs only provably safe issues (math operators, token offsets, icon colour) and *refuses to write* while design errors remain.
-- **Spec builder** â€” author shortcuts as readable JSON, never as hand-placed binary plists.
+- **Zero dependencies** — Python 3 standard library only. No `pip install`, no Node, no Xcode.
+- **Runs anywhere** — Windows, macOS, Linux. Build and lint on Windows; sign on any Mac.
+- **Coded lint findings** — stable `E_*` / `W_*` / `I_*` codes with `--json` output for agents and CI.
+- **Target- and OS-aware** — `--target ios|macos|both`, `--min-os 26|27` gating for platform- and version-only actions.
+- **Conservative fixer** — repairs only provably safe issues (math operators, unambiguous token offsets, icon colour), never re-binds variables, and *refuses to write* while design errors remain.
+- **Spec builder** — author shortcuts as readable JSON, never as hand-placed binary plists.
 
 ## Quick start
 
@@ -63,7 +63,7 @@ shortcuts sign --mode anyone --input "Post Clipboard.shortcut" --output "Post Cl
 
 > On macOS/Linux, replace `py` with `python3`.
 
-No Mac? Read [No Mac? No problem â€” honestly](#no-mac-no-problem--honestly) before promising anyone a file.
+No Mac? Read [No Mac? No problem — honestly](#no-mac-no-problem--honestly) before promising anyone a file.
 
 ## The flagship trick: target-diff debugging
 
@@ -74,19 +74,20 @@ py scripts/validate_shortcut.py broken.shortcut --target macos --min-os 26
 py scripts/validate_shortcut.py broken.shortcut --target ios   --min-os 26
 ```
 
-Errors that appear **only in the iOS run** are platform bugs by definition. You don't read 30 actions by hand â€” the diff points at the culprit. Same trick with `--min-os 26` vs `--min-os 27` for version gating.
+Errors that appear **only in the iOS run** are platform bugs by definition. You don't read 30 actions by hand — the diff points at the culprit. Same trick with `--min-os 26` vs `--min-os 27` for version gating.
 
-Full worked example: [docs/demo-walkthrough.md](docs/demo-walkthrough.md) â€” a deliberately broken shortcut, diagnosed and fixed step by step.
+Full worked example: [docs/demo-walkthrough.md](docs/demo-walkthrough.md) — a deliberately broken shortcut, diagnosed and fixed step by step.
 
 ## Tools
 
 | Script | Purpose |
 |---|---|
-| `scripts/build_shortcut.py` | JSON spec â†’ unsigned `.shortcut` (binary or `--xml`). Auto-lints, refuses errors. `--seed` for reproducible builds. |
+| `scripts/build_shortcut.py` | JSON spec → unsigned `.shortcut` (binary or `--xml`). Auto-lints, refuses errors. `--seed` for reproducible builds. |
 | `scripts/validate_shortcut.py` | Target/OS-aware linter. Coded findings, `--json`, `--fail-on-warning`, stable exit codes. |
 | `scripts/inspect_shortcut.py` | Human-readable numbered action dump; `--json` for the raw plist. |
 | `scripts/fix_shortcut.py` | Provably-safe repairs only. Never re-binds variables; refuses to write while design errors remain. |
 | `scripts/test_lint.py` | 49 checks proving the linter catches every failure mode it claims. |
+| `scripts/check_encoding.py` | Verifies every text file is clean UTF-8 with LF endings — catches double-encoded files that render as mojibake. |
 | `scripts/make_fixture.py` | Regenerates the deliberately broken demo fixture (byte-identical every run). |
 | `scripts/shortcut_lib.py` | Spec engine: token strings, control flow, typed convenience actions. |
 
@@ -105,9 +106,9 @@ Full worked example: [docs/demo-walkthrough.md](docs/demo-walkthrough.md) â€�
 }
 ```
 
-`{name}` placeholders become real `WFTextTokenString` attachments with correct UTF-16 offsets â€” including the emoji-counts-as-2 trap â€” computed by the builder. Schema: [`assets/spec.schema.json`](assets/spec.schema.json). Working specs: [`examples/`](examples/).
+`{name}` placeholders become real `WFTextTokenString` attachments with correct UTF-16 offsets — including the emoji-counts-as-2 trap — computed by the builder. Schema: [`assets/spec.schema.json`](assets/spec.schema.json). Working specs: [`examples/`](examples/).
 
-## No Mac? No problem â€” honestly
+## No Mac? No problem — honestly
 
 iOS 15+ imports **only signed** `.shortcut` files, and only macOS can sign (`shortcuts sign`). There is no Windows or iOS workaround, and this skill will not pretend otherwise.
 
@@ -124,24 +125,24 @@ That honesty is a feature. A signed-file promise that fails at import time is no
 
 | Spec | What it does |
 |---|---|
-| [`assets/example-hello.json`](assets/example-hello.json) | Ask for a name â†’ notification â†’ on-screen greeting |
+| [`assets/example-hello.json`](assets/example-hello.json) | Ask for a name → notification → on-screen greeting |
 | [`assets/example-api-guard.json`](assets/example-api-guard.json) | Fetch an API, branch on its `status` key, alert or show the message |
-| [`examples/post-clipboard.json`](examples/post-clipboard.json) | Lowercase the clipboard, strip a `posted:` marker, send it â€” with an empty-clipboard guard |
+| [`examples/post-clipboard.json`](examples/post-clipboard.json) | Lowercase the clipboard, strip a `posted:` marker, send it — with an empty-clipboard guard |
 | [`examples/open-first-url.json`](examples/open-first-url.json) | Open the first URL found in the clipboard |
-| [`examples/broken-post-clipboard.json`](examples/broken-post-clipboard.json) | Deliberately broken twin of Post Clipboard â€” the debugging demo fixture |
+| [`examples/broken-post-clipboard.json`](examples/broken-post-clipboard.json) | Deliberately broken twin of Post Clipboard — the debugging demo fixture |
 
 ## Repository layout
 
 ```
 .
-â”œâ”€â”€ SKILL.md                  # the agent skill itself (start here if you are an agent)
-â”œâ”€â”€ README.md
-â”œâ”€â”€ assets/                   # spec schema + starter specs
-â”œâ”€â”€ examples/                 # working specs + the broken demo fixture
-â”œâ”€â”€ scripts/                  # builder, linter, inspector, fixer, tests (stdlib only)
-â”œâ”€â”€ references/               # file format, lint rules, deployment & debugging
-â”œâ”€â”€ docs/                     # banner + broken â†’ diagnosed â†’ fixed walkthrough
-â””â”€â”€ evals/                    # evaluation prompts for agent behaviour
+├── SKILL.md                  # the agent skill itself (start here if you are an agent)
+├── README.md
+├── assets/                   # spec schema + starter specs
+├── examples/                 # working specs + the broken demo fixture
+├── scripts/                  # builder, linter, inspector, fixer, tests (stdlib only)
+├── references/               # file format, lint rules, deployment & debugging
+├── docs/                     # banner + broken → diagnosed → fixed walkthrough
+└── evals/                    # evaluation prompts for agent behaviour
 ```
 
 **Using this as an agent skill?** Drop the folder where your agent loads skills from and point it at `SKILL.md`. It follows the [Agent Skills](https://agentskills.io) `SKILL.md` format.
@@ -152,23 +153,26 @@ That honesty is a feature. A signed-file promise that fails at import time is no
 py scripts/test_lint.py
 # 49/49 passed
 
+py scripts/check_encoding.py
+# OK: 26 text file(s) are clean UTF-8 with LF endings.
+
 # Rebuild every shipped example and lint it clean
 py scripts/build_shortcut.py assets/example-hello.json -o "output/Hello You.shortcut"
 py scripts/build_shortcut.py examples/post-clipboard.json -o "output/Post Clipboard.shortcut"
 py scripts/validate_shortcut.py "output/Post Clipboard.shortcut" --target ios --min-os 26
 ```
 
-On-device import and signing still need real Apple hardware â€” see the release checklist in [`references/deployment-and-debugging.md`](references/deployment-and-debugging.md).
+On-device import and signing still need real Apple hardware — see the release checklist in [`references/deployment-and-debugging.md`](references/deployment-and-debugging.md).
 
 ## References
 
-- [`references/file-format.md`](references/file-format.md) â€” containers, token strings, control flow, the full condition-code table, input keys, platform gating
-- [`references/lint-rules.md`](references/lint-rules.md) â€” every lint code, typical fixes, known false positives
-- [`references/deployment-and-debugging.md`](references/deployment-and-debugging.md) â€” signing gate, delivery channels, permissions, symptom â†’ cause â†’ fix table
+- [`references/file-format.md`](references/file-format.md) — containers, token strings, control flow, the full condition-code table, input keys, platform gating
+- [`references/lint-rules.md`](references/lint-rules.md) — every lint code, typical fixes, known false positives
+- [`references/deployment-and-debugging.md`](references/deployment-and-debugging.md) — signing gate, delivery channels, permissions, symptom → cause → fix table
 
 ## Contributing
 
-Issues and PRs welcome â€” see [CONTRIBUTING.md](CONTRIBUTING.md). If you add a lint rule, add its test in `scripts/test_lint.py` in the same change.
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). If you add a lint rule, add its test in `scripts/test_lint.py` in the same change.
 
 ## License
 
@@ -176,6 +180,6 @@ Issues and PRs welcome â€” see [CONTRIBUTING.md](CONTRIBUTING.md). If you a
 
 ## Project files
 
-- [CHANGELOG.md](CHANGELOG.md) â€” release history
-- [SECURITY.md](SECURITY.md) â€” reporting a vulnerability, and how to handle untrusted shortcuts
-- [evals/evals.json](evals/evals.json) â€” evaluation prompts for agent behaviour
+- [CHANGELOG.md](CHANGELOG.md) — release history
+- [SECURITY.md](SECURITY.md) — reporting a vulnerability, and how to handle untrusted shortcuts
+- [evals/evals.json](evals/evals.json) — evaluation prompts for agent behaviour
