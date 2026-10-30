@@ -17,7 +17,7 @@ license: MIT
 compatibility: Python 3.9+ standard library only; no third-party packages. macOS-only for signing (shortcuts sign) and on-device GUI import.
 metadata:
   version: "1.0.0"
-  author: "Dana (Pearl) for Bu Ajlan (The Black Wolf)"
+  author: "By DVRRK (DVRK-ORG)"
   format: "Agent Skills (SKILL.md)"
 ---
 
