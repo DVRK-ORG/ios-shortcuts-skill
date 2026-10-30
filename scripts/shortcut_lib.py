@@ -19,9 +19,28 @@ import uuid
 PLACEHOLDER = "\ufffc"  # U+FFFC OBJECT REPLACEMENT CHARACTER — attachment marker inside token strings
 A = "is.workflow.actions."
 
+# Deterministic UUID mode state — see set_uuid_seed() below.
+_UUID_SEED = None
+_UUID_COUNTER = 0
+
 
 def new_uuid() -> str:
+    global _UUID_COUNTER
+    if _UUID_SEED is not None:
+        _UUID_COUNTER += 1
+        return str(uuid.uuid5(uuid.UUID(_UUID_SEED), "action-%d" % _UUID_COUNTER)).upper()
     return str(uuid.uuid4()).upper()
+
+
+def set_uuid_seed(seed):
+    """Enable deterministic UUID generation. Pass None to return to random UUIDs.
+
+    Deterministic mode keeps committed demo fixtures byte-stable across rebuilds,
+    so regenerating one never dirties the repository.
+    """
+    global _UUID_SEED, _UUID_COUNTER
+    _UUID_SEED = seed
+    _UUID_COUNTER = 0
 
 
 def utf16_len(s: str) -> int:

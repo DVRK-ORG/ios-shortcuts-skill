@@ -23,9 +23,10 @@ import os
 import plistlib
 import re
 import sys
+import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shortcut_lib import ShortcutBuilder  # noqa: E402
+from shortcut_lib import ShortcutBuilder, set_uuid_seed  # noqa: E402
 import validate_shortcut  # noqa: E402
 
 try:  # keep UTF-8 printable on legacy Windows consoles (cp1252)
@@ -151,7 +152,11 @@ def main():
     ap.add_argument("--stdout", action="store_true", help="print plist as JSON instead of writing a file")
     ap.add_argument("--lint-target", choices=["ios", "macos"], default="ios", help="lint target for the auto-validation gate")
     ap.add_argument("--lint-min-os", type=int, default=26, help="minimum OS major version for the lint gate")
+    ap.add_argument("--seed", help="deterministic UUID seed (any string) — the same seed always produces the same file")
     args = ap.parse_args()
+
+    if args.seed:
+        set_uuid_seed(str(uuid.UUID(args.seed)))
 
     with open(args.spec, "r", encoding="utf-8") as f:
         spec = json.load(f)

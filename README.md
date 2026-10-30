@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](#quick-start)
-[![Lint tests](https://img.shields.io/badge/lint%20tests-25%2F25-blue.svg)](#testing)
+[![Lint tests](https://img.shields.io/badge/lint%20tests-30%2F30-blue.svg)](#testing)
 
 *Stop hand-editing plists. Stop shipping shortcuts that silently do nothing.*
 
@@ -76,12 +76,12 @@ Full worked example: [docs/demo-walkthrough.md](docs/demo-walkthrough.md) — a 
 
 | Script | Purpose |
 |---|---|
-| `scripts/build_shortcut.py` | JSON spec → unsigned `.shortcut` (binary or `--xml`). Auto-lints, refuses errors. |
+| `scripts/build_shortcut.py` | JSON spec → unsigned `.shortcut` (binary or `--xml`). Auto-lints, refuses errors. `--seed` for reproducible builds. |
 | `scripts/validate_shortcut.py` | Target/OS-aware linter. Coded findings, `--json`, `--fail-on-warning`, stable exit codes. |
 | `scripts/inspect_shortcut.py` | Human-readable numbered action dump; `--json` for the raw plist. |
 | `scripts/fix_shortcut.py` | Provably-safe repairs only. Refuses to write while design errors remain. |
-| `scripts/test_lint.py` | 25 checks proving the linter catches every failure mode it claims. |
-| `scripts/make_fixture.py` | Regenerates the deliberately broken demo fixture. |
+| `scripts/test_lint.py` | 30 checks proving the linter catches every failure mode it claims. |
+| `scripts/make_fixture.py` | Regenerates the deliberately broken demo fixture (byte-identical every run). |
 | `scripts/shortcut_lib.py` | Spec engine: token strings, control flow, typed convenience actions. |
 
 ## Write a spec, not a plist
@@ -144,7 +144,7 @@ That honesty is a feature. A signed-file promise that fails at import time is no
 
 ```bash
 py scripts/test_lint.py
-# 25/25 passed
+# 30/30 passed
 
 # Rebuild every shipped example and lint it clean
 py scripts/build_shortcut.py assets/example-hello.json -o "output/Hello You.shortcut"

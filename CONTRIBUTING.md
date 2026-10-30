@@ -6,7 +6,7 @@ Thanks for helping make shortcut tooling less painful. This project is small on 
 
 - **Python standard library only.** No new third-party dependencies in `scripts/`. If a change needs one, open an issue first.
 - **Never hand-edit a binary plist.** Change the spec or the builder, rebuild, re-lint, re-inspect.
-- **Every lint rule ships with a test.** Add the failing fixture case to `scripts/test_lint.py` in the same change; `py scripts/test_lint.py` must pass 25+ checks.
+- **Every lint rule ships with a test.** Add the failing fixture case to `scripts/test_lint.py` in the same change; `py scripts/test_lint.py` must pass 30+ checks.
 - **The fixer stays conservative.** It may only apply repairs that are provably behaviour-preserving. Anything needing a design decision belongs in the linter's message, not in a guess.
 - **Honesty about signing.** Never document or imply a path to an iOS-importable file that skips macOS signing.
 

@@ -91,12 +91,12 @@ with zero dependencies. Only signing and on-device testing need Apple hardware.
 
 | Script | What it does |
 |---|---|
-| `scripts/build_shortcut.py` | JSON spec → unsigned `.shortcut` (binary; `--xml` for review). Auto-lints, refuses errors. |
+| `scripts/build_shortcut.py` | JSON spec → unsigned `.shortcut` (binary; `--xml` for review). Auto-lints, refuses errors. `--seed` for reproducible builds. |
 | `scripts/validate_shortcut.py` | Target/OS-aware lint with stable codes (`E_*`, `W_*`, `I_*`). `--target ios|macos|both`, `--min-os N`, `--json`, `--fail-on-warning`. Exit 1 on errors. |
 | `scripts/inspect_shortcut.py` | Human-readable numbered action dump; `--json` for the raw plist. |
 | `scripts/fix_shortcut.py` | Provably-safe machine repairs only (math operators, token offsets, icon colour). Refuses to write while design errors remain. |
-| `scripts/test_lint.py` | Proves the linter catches every failure mode it claims (25 checks). Run after changing rules. |
-| `scripts/make_fixture.py` | Regenerates the deliberately-broken demo fixture. |
+| `scripts/test_lint.py` | Proves the linter catches every failure mode it claims (30 checks). Run after changing rules. |
+| `scripts/make_fixture.py` | Regenerates the deliberately-broken demo fixture (deterministic — byte-identical every run). |
 | `scripts/shortcut_lib.py` | Spec engine: token strings, control flow, typed convenience actions. |
 
 ## The target-diff diagnostic — use it first when debugging

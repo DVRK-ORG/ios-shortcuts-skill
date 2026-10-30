@@ -158,5 +158,32 @@ for name in ("example-hello", "example-api-guard"):
         res = validate(wf, target="ios", min_os=26)
         check("shipped example %s lints clean" % name, not res.by("error"), ",".join(res.codes("error")))
 
+# deterministic UUID mode: the same seed must produce the same action UUIDs,
+# so regenerating the committed demo fixture never dirties the repository.
+import json as _json
+from build_shortcut import build
+from shortcut_lib import set_uuid_seed
+
+_seed = "6f2b1c4e-8a3d-4f5b-9c2d-7e1a6b0d4f38"
+_fixture_spec = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "examples", "broken-post-clipboard.json")
+if os.path.exists(_fixture_spec):
+    _spec = _json.load(open(_fixture_spec, encoding="utf-8"))
+    set_uuid_seed(_seed)
+    _a = build(_spec).to_plist()
+    set_uuid_seed(_seed)
+    _b = build(_spec).to_plist()
+    _uuids_a = [x["WFWorkflowActionParameters"]["UUID"] for x in _a["WFWorkflowActions"]]
+    _uuids_b = [x["WFWorkflowActionParameters"]["UUID"] for x in _b["WFWorkflowActions"]]
+    check("seeded build is reproducible", _uuids_a == _uuids_b)
+    set_uuid_seed(None)
+    _c = build(_spec).to_plist()
+    _uuids_c = [x["WFWorkflowActionParameters"]["UUID"] for x in _c["WFWorkflowActions"]]
+    check("unseeded build uses fresh UUIDs", _uuids_c != _uuids_a)
+    _r = validate(_a, target="ios", min_os=26)
+    _rm = validate(_a, target="macos", min_os=26)
+    check("fixture fails on iOS with 6 errors", len(_r.by("error")) == 6, str(len(_r.by("error"))))
+    check("fixture fails on macOS with 5 errors", len(_rm.by("error")) == 5, str(len(_rm.by("error"))))
+    check("platform-only error is macOS_ONLY", "E_MACOS_ONLY" in _r.codes("error") and "E_MACOS_ONLY" not in _rm.codes("error"))
+
 print("\n%d/%d passed" % (sum(RESULTS), len(RESULTS)))
 sys.exit(0 if all(RESULTS) else 1)

@@ -9,7 +9,7 @@ Everything here runs on any OS. Only the final signing step needs a Mac.
 ## 1. The broken shortcut
 
 Spec: [`examples/broken-post-clipboard.json`](../examples/broken-post-clipboard.json)  
-Built fixture: `examples/broken-post-clipboard.shortcut` (regenerate with `py scripts/make_fixture.py`)
+Built fixture: `examples/broken-post-clipboard.shortcut` (regenerate with `py scripts/make_fixture.py` — it uses a fixed UUID seed, so the rebuilt file is byte-identical to the committed one)
 
 ```bash
 py scripts/inspect_shortcut.py examples/broken-post-clipboard.shortcut

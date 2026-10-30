@@ -61,6 +61,8 @@ useful — a common cause of "it does nothing when run from the Share Sheet".
   be validated locally.
 - `UUID` — **uppercase** 8-4-4-4-12 hex, unique per action, generated (not
   hand-picked). Repeating-hex placeholders like `AAAAAAAA-…` are rejected.
+  The spec builder generates them randomly by default; pass `--seed <uuid>` to
+  `build_shortcut.py` for a byte-reproducible build (same seed → same file).
 - Parameter values are raw scalars (note Apple often stores number-typed params
   as *strings*, e.g. `"42"`), a variable/action-output reference, a token string,
   or a nested dict/list.
