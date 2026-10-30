@@ -1,0 +1,12 @@
+{
+  "name": "Hello You",
+  "clientVersion": "2700.0.4",
+  "minimumClientVersion": 900,
+  "inputClasses": ["WFStringContentItem"],
+  "actions": [
+    { "do": "ask", "prompt": "What's your name?", "inputType": "Text", "as": "name" },
+    { "do": "setvar", "name": "Greeting", "input": "Hello, {name}!" },
+    { "do": "notify", "title": "Greeting", "body": "Hello, {name}!", "sound": true },
+    { "do": "show", "text": "Nice to meet you, {name}. Your greeting is stored in the variable Greeting." }
+  ]
+}

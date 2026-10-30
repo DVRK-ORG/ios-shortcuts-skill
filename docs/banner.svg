@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="iOS Shortcuts Skill — build, lint, debug and ship Apple Shortcuts from any agent on any OS">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0e14"/>
+      <stop offset="55%" stop-color="#111823"/>
+      <stop offset="100%" stop-color="#0c1119"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8fa3b8"/>
+      <stop offset="35%" stop-color="#f2f6fa"/>
+      <stop offset="70%" stop-color="#c9d6e4"/>
+      <stop offset="100%" stop-color="#7f93a8"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="420" fill="url(#bg)"/>
+  <rect width="1200" height="420" fill="url(#grid)"/>
+
+  <g filter="url(#glow)" opacity="0.5">
+    <circle cx="1040" cy="96" r="130" fill="#3b82f6" fill-opacity="0.14"/>
+    <circle cx="150" cy="372" r="110" fill="#8b5cf6" fill-opacity="0.12"/>
+  </g>
+
+  <g transform="translate(72,92)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0" width="46" height="46" rx="12" fill="none" stroke="url(#silver)" stroke-width="2.5"/>
+      <path d="M13 31c0-7 4-11 10-11s10 4 10 11" fill="none" stroke="url(#silver)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="23" cy="14" r="4" fill="url(#silver)"/>
+    </g>
+    <text x="66" y="20" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" letter-spacing="3.4" fill="#7f93a8">AGENT SKILL</text>
+    <text x="66" y="46" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" letter-spacing="3.4" fill="#5f7183">PYTHON 3 · STANDARD LIBRARY ONLY</text>
+  </g>
+
+  <text x="72" y="212" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="url(#silver)" letter-spacing="-1.5">iOS Shortcuts Skill</text>
+
+  <text x="74" y="262" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="25" font-weight="500" fill="#aebdcd">Build · Lint · Debug · Ship Apple Shortcuts — from any agent, on any OS</text>
+
+  <rect x="72" y="298" width="1056" height="1" fill="url(#accent)" opacity="0.85"/>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">
+    <text x="74" y="336" fill="#7f93a8">$</text>
+    <text x="96" y="336" fill="#e2e8f0">py scripts/build_shortcut.py spec.json -o &quot;Name.shortcut&quot;</text>
+    <text x="74" y="368" fill="#7f93a8">$</text>
+    <text x="96" y="368" fill="#e2e8f0">py scripts/validate_shortcut.py &quot;Name.shortcut&quot; --target ios --min-os 26</text>
+    <text x="782" y="368" fill="#4ade80">0 errors</text>
+  </g>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="600">
+    <text x="900" y="336" fill="#8fa3b8">ZERO DEPS</text>
+    <text x="1042" y="336" fill="#8fa3b8">MIT</text>
+  </g>
+</svg>

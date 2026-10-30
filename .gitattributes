@@ -1,0 +1,27 @@
+# Normalize text files to LF in the repository and in working trees.
+# Keeps diffs clean across Windows, macOS and Linux contributors, and keeps
+# the Python scripts byte-identical everywhere.
+* text=auto eol=lf
+
+*.py   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.txt  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.svg  text eol=lf
+*.sh   text eol=lf
+
+# Binary assets — never touched by EOL conversion.
+*.png  -text
+*.jpg  -text
+*.jpeg -text
+*.gif  -text
+*.ico  -text
+*.pdf  -text
+*.mp3  -text
+*.m4a  -text
+
+# The broken demo fixture is a binary plist and must stay byte-exact,
+# or the linter's findings would shift on other platforms.
+examples/*.shortcut -text

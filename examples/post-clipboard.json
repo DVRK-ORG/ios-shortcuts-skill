@@ -1,0 +1,18 @@
+{
+  "name": "Post Clipboard",
+  "clientVersion": "2700.0.4",
+  "minimumClientVersion": 900,
+  "inputClasses": ["WFStringContentItem"],
+  "actions": [
+    { "do": "comment", "text": "Copy some text, then run this shortcut: it lowercases the clipboard, strips a leading \"posted:\" marker, and sends the result as an iMessage. Replace the placeholder recipient before the first run." },
+    { "do": "getclipboard", "as": "clip" },
+    { "do": "changecase", "input": "{clip}", "case": "lowercase", "as": "lower" },
+    { "do": "replace", "input": "{lower}", "find": "^posted\\s*:?\\s*", "replace": "", "regex": true, "as": "body" },
+    { "do": "if", "group": "g1", "input": "{body}", "condition": 100 },
+    { "do": "sendmessage", "recipients": "+15555550100", "content": "Posted: {body}", "showWhenRun": false },
+    { "do": "show", "text": "Posted" },
+    { "do": "else", "group": "g1" },
+    { "do": "alert", "title": "Nothing to post", "message": "Your clipboard is empty. Copy some text, then run this again." },
+    { "do": "endif", "group": "g1" }
+  ]
+}

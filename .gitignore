@@ -1,0 +1,17 @@
+# Build artifacts and local noise — never commit these.
+output/
+*.pyc
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+
+# Comparison / research material, not part of the published skill.
+_src/
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

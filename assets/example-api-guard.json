@@ -1,0 +1,15 @@
+{
+  "name": "API Guard Demo",
+  "minimumClientVersion": 900,
+  "actions": [
+    { "do": "comment", "text": "DEBUG: fetch status from API" },
+    { "do": "download", "url": "https://api.example.com/status", "method": "GET", "as": "resp" },
+    { "do": "getdict", "key": "status", "input": "{resp}", "as": "status" },
+    { "do": "if", "group": "g1", "input": "{status}", "condition": 5, "compare": "ok" },
+    { "do": "alert", "title": "API failed", "message": "Status was {status}, expected ok" },
+    { "do": "else", "group": "g1" },
+    { "do": "getdict", "key": "message", "input": "{resp}", "as": "msg" },
+    { "do": "show", "text": "🎉 {msg} (status: {status})" },
+    { "do": "endif", "group": "g1" }
+  ]
+}

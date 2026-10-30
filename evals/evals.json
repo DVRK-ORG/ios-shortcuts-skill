@@ -1,0 +1,35 @@
+{
+  "skill_name": "ios-shortcuts",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Build me an iOS shortcut that asks 'What's your name?', then posts a banner notification 'Hello, <name>!', and finally shows on screen 'Nice to meet you, <name>'. Produce the .shortcut file and prove it passes validation.",
+      "expected_output": "An unsigned .shortcut (binary plist) built from assets/example-hello.json with ask -> notification -> showresult; {name} wired via token strings with correct UTF-16 offsets; validate_shortcut.py --target ios --min-os 26 reports 0 errors; inspect shows the actions in order; signing on a Mac is stated as the remaining step for iOS 15+ import.",
+      "files": ["assets/example-hello.json"]
+    },
+    {
+      "id": 2,
+      "prompt": "I downloaded a .shortcut file from GitHub and my iPhone running iOS 17 says \"Couldn't add shortcut\" when I open it. What is wrong, how do I fix it, and what should I check in the file itself before trying again?",
+      "expected_output": "Explains iOS 15+ requires signed AEA1 files: sign on a Mac with `shortcuts sign --mode anyone` (or people-who-know-me) or share via iCloud link from Shortcuts.app; the iOS 13/14 unsigned path with Allow Untrusted Shortcuts (grayed until a shortcut has run once); tells the user to lint the unsigned plist with validate_shortcut.py and inspect it before retrying; mentions a signed AEA1 file cannot be linted directly and the file-name-becomes-shortcut-name rule.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Take a shortcut that calls an API with Get Contents of URL and make it safe: fetch https://api.example.com/status, read the 'status' key; if it is not 'ok', show an alert 'API failed' with the actual status; otherwise read the 'message' key and show it (prefix the text with an emoji). Give me the new .shortcut and its spec.",
+      "expected_output": "Spec + built .shortcut (assets/example-api-guard.json) with download -> getdict(status) -> conditional WFCondition 5 (is not, string compare 'ok' via WFConditionalActionString, GroupingIdentifier g1) -> alert -> else -> getdict(message) -> showresult with emoji + {placeholders} -> endif; builder/linter report balanced control flow and 0 errors; token-string offsets are UTF-16 correct (the emoji counts as 2 code units).",
+      "files": ["assets/example-api-guard.json"]
+    },
+    {
+      "id": 4,
+      "prompt": "My shortcut works on my Mac but does nothing on my iPhone. Here is the file: examples/broken-post-clipboard.shortcut. Diagnose it and give me a version that works on iOS.",
+      "expected_output": "Runs the target-diff: validate --target ios reports 6 errors vs 5 on macos, isolating E_MACOS_ONLY (runshellscript) as the platform bug; also names E_COND_NO_INPUT, E_COND_LITERAL (code 99 needs WFConditionalActionString), E_INPUT_KEY (text.replace carrying 'text'), E_MATH_OP (ASCII '/'), and E_UNCLOSED_GROUP (g1 never closes) as design bugs; notes fix_shortcut.py repairs only the provable subset and refuses to write; delivers the corrected rebuild from examples/post-clipboard.json (changecase instead of shell, condition 100 existence guard, closed if/else/endif, visible output) linting 0 errors on ios, plus the Mac signing step. Does not claim the unsigned file imports on iOS 15+.",
+      "files": ["examples/broken-post-clipboard.shortcut", "examples/post-clipboard.json"]
+    },
+    {
+      "id": 5,
+      "prompt": "I have no Mac — I am on Windows. Make me a shortcut that opens the first link in my clipboard and get it onto my iPhone.",
+      "expected_output": "Does NOT promise an importable .shortcut (iOS 15+ imports signed files only; only macOS signs) and says so early. Builds examples/open-first-url.json on Windows (getclipboard -> detectlinks -> if condition 100 -> firstitem -> openurl, else alert), lints 0 errors for --target ios, inspects the action list, then delivers the honest hand-off: a numbered Shortcuts.app build recipe and/or the unsigned file plus the one-line `shortcuts sign --mode anyone` command for any borrowed Mac, or an iCloud-link path once it exists on a device.",
+      "files": ["examples/open-first-url.json"]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "name": "Broken Post Clipboard",
+  "clientVersion": "2700.0.4",
+  "minimumClientVersion": 900,
+  "inputClasses": ["WFStringContentItem"],
+  "icon": { "WFWorkflowIconGlyphNumber": 59511 },
+  "actions": [
+    { "do": "getclipboard", "as": "clip" },
+    {
+      "do": "raw",
+      "identifier": "is.workflow.actions.runshellscript",
+      "parameters": { "WFScript": "printf '%s' \"$1\" | tr '[:upper:]' '[:lower:]'" },
+      "as": "lower"
+    },
+    { "do": "if", "group": "g1", "condition": 99 },
+    { "do": "text", "text": "{clip}", "as": "draft" },
+    {
+      "do": "raw",
+      "identifier": "is.workflow.actions.text.replace",
+      "parameters": {
+        "text": "placeholder",
+        "WFReplaceTextFind": "^posted\\s*:?\\s*",
+        "WFReplaceTextReplace": "",
+        "WFReplaceTextRegularExpression": true
+      },
+      "as": "body"
+    },
+    {
+      "do": "raw",
+      "identifier": "is.workflow.actions.math",
+      "parameters": { "WFMathOperation": "/", "WFMathOperand": "10" },
+      "as": "math"
+    },
+    { "do": "setclipboard", "input": "{clip}" }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "ios-shortcuts build spec",
+  "description": "Input for scripts/build_shortcut.py — compiles to an unsigned .shortcut plist.",
+  "type": "object",
+  "required": ["name", "actions"],
+  "properties": {
+    "name": { "type": "string", "description": "Shortcut name (WFWorkflowName). If omitted in the plist, the file name is used on import." },
+    "clientVersion": { "type": "string", "default": "2700.0.4", "description": "WFWorkflowClientVersion, Shortcuts.app version string." },
+    "minimumClientVersion": { "type": "integer", "default": 900, "description": "WFWorkflowMinimumClientVersion. 900 = broad compat (iOS 14+). >=1100 means iOS 15+, which requires a signed file to import." },
+    "icon": {
+      "type": "object",
+      "properties": {
+        "glyph": { "type": "integer", "description": "WFWorkflowIconGlyphNumber (SF Symbol code)", "default": 61440 },
+        "color": { "type": "integer", "description": "WFWorkflowIconStartColor (int-encoded color)", "default": 431817727 }
+      }
+    },
+    "types": { "type": "array", "items": { "type": "string" }, "description": "WFWorkflowTypes, e.g. [\"ActionExtension\"] to show in the share sheet, [\"NCWidget\"] for widgets." },
+    "inputClasses": { "type": "array", "items": { "type": "string" }, "default": ["WFStringContentItem"], "description": "WFWorkflowInputContentItemClasses, e.g. WFStringContentItem, WFURLContentItem, WFImageContentItem, WFGenericFileContentItem." },
+    "outputClasses": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "hasOutputFallback": { "type": "boolean", "default": false },
+    "hasInputVariables": { "type": "boolean", "default": false },
+    "actions": {
+      "type": "array",
+      "description": "Ordered actions. Text fields support {name} placeholders referencing an earlier action's \"as\", and {input} for Shortcut Input. Input fields accept \"{name}\", \"$input\"/\"{input}\", \"$var:Name\", or a raw plist dict.",
+      "items": {
+        "type": "object",
+        "required": ["do"],
+        "properties": {
+          "do": {
+            "type": "string",
+            "enum": ["raw", "text", "comment", "show", "alert", "notify", "ask", "setvar", "getvar", "url", "openurl", "download", "quicklook", "wait", "getdict", "getclipboard", "setclipboard", "detectlinks", "firstitem", "changecase", "replace", "calculate", "sendmessage", "if", "else", "endif", "menu", "case", "endmenu", "repeat", "repeateach", "endblock"]
+          },
+          "as": { "type": "string", "description": "Names this action's output so later text fields can use {name}." },
+          "identifier": { "type": "string", "description": "raw: full action identifier, e.g. is.workflow.actions.gettext" },
+          "parameters": { "type": "object", "description": "raw: full WFWorkflowActionParameters dict (UUID is added automatically)." },
+          "text": { "type": "string" },
+          "message": { "type": "string" },
+          "title": { "type": "string" },
+          "body": { "type": "string" },
+          "sound": { "type": "boolean", "default": true },
+          "prompt": { "type": "string" },
+          "inputType": { "type": "string", "default": "Text", "description": "ask: Text, Number, URL, Date, Time, ..." },
+          "name": { "type": "string" },
+          "find": { "type": "string", "description": "replace: find pattern (regex when regex=true)" },
+          "replace": { "type": "string", "description": "replace: replacement string" },
+          "case": { "type": "string", "description": "changecase: lowercase, uppercase, ..." },
+          "caseSensitive": { "type": "boolean", "default": false },
+          "regex": { "type": "boolean", "default": false },
+          "operation": { "type": "string", "description": "calculate: +, -, *, / (translated to the Unicode operators Shortcuts expects)" },
+          "operand": { "description": "calculate: operand literal, e.g. 10 or \"10\"" },
+          "content": { "type": "string", "description": "sendmessage: message text, {name} placeholders allowed" },
+          "recipients": { "description": "sendmessage: recipient or recipients" },
+          "showWhenRun": { "type": "boolean", "default": false },
+          "input": { "description": "'{outputName}', '$input'/'{input}', '$var:VariableName', or raw plist dict" },
+          "url": { "type": "string" },
+          "method": { "type": "string", "default": "GET" },
+          "extra": { "type": "object", "description": "download: extra WFWorkflowActionParameters (headers, body, ...)" },
+          "seconds": { "type": "number", "default": 1 },
+          "key": { "type": "string", "description": "getdict: dictionary key, dot paths allowed" },
+          "condition": { "type": "integer", "default": 100, "description": "if: WFCondition code — 0 <, 1 <=, 2 >, 3 >= (numeric, WFNumberValue); 4 is, 5 is not, 8 begins with, 9 ends with, 99 contains, 999 does not contain (string, WFConditionalActionString); 100 has any value, 101 no value; 1002 is today, 1003 between" },
+          "compare": { "description": "if: comparison value — string goes to WFConditionalActionString, number to WFNumberValue" },
+          "group": { "type": "string", "description": "control flow: explicit GroupingIdentifier shared by if/else/endif, menu/case/endmenu, repeat/endrepeat" },
+          "items": { "type": "array", "items": { "type": "string" }, "description": "menu: item titles" },
+          "count": { "type": "integer", "default": 1, "description": "repeat: number of iterations" }
+        }
+      }
+    }
+  }
+}

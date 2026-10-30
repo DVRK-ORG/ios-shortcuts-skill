@@ -1,0 +1,17 @@
+{
+  "name": "Open First URL in Clipboard",
+  "clientVersion": "2700.0.4",
+  "minimumClientVersion": 900,
+  "inputClasses": [],
+  "actions": [
+    { "do": "comment", "text": "Reads the clipboard, finds every link in it, and opens the first one in Safari." },
+    { "do": "getclipboard", "as": "clip" },
+    { "do": "detectlinks", "input": "{clip}", "as": "urls" },
+    { "do": "if", "group": "g1", "input": "{urls}", "condition": 100 },
+    { "do": "firstitem", "input": "{urls}", "as": "first" },
+    { "do": "openurl", "url": "{first}" },
+    { "do": "else", "group": "g1" },
+    { "do": "alert", "title": "No URLs found", "message": "Your clipboard does not seem to contain any links. Copy some text with a link in it, then try again." },
+    { "do": "endif", "group": "g1" }
+  ]
+}
