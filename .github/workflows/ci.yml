@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint tests (python ${{ matrix.python-version }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # bash everywhere: available on ubuntu, macOS and Windows (Git Bash).
+        # Keeps one syntax across the whole matrix.
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Ignore file-mode differences
+        run: git config core.fileMode false
+
+      - name: Run the lint test suite
+        run: python scripts/test_lint.py
+
+      - name: Build every shipped example
+        run: |
+          python scripts/build_shortcut.py assets/example-hello.json -o "output/Hello You.shortcut"
+          python scripts/build_shortcut.py assets/example-api-guard.json -o "output/API Guard Demo.shortcut"
+          python scripts/build_shortcut.py examples/post-clipboard.json -o "output/Post Clipboard.shortcut"
+          python scripts/build_shortcut.py examples/open-first-url.json -o "output/Open First URL in Clipboard.shortcut"
+
+      - name: Lint every example for iOS and macOS
+        run: |
+          python scripts/validate_shortcut.py "output/Hello You.shortcut" --target both --min-os 26
+          python scripts/validate_shortcut.py "output/API Guard Demo.shortcut" --target both --min-os 26
+          python scripts/validate_shortcut.py "output/Post Clipboard.shortcut" --target both --min-os 26
+          python scripts/validate_shortcut.py "output/Open First URL in Clipboard.shortcut" --target both --min-os 26
+
+      - name: Regenerate the demo fixture and check it is byte-identical
+        run: |
+          python scripts/make_fixture.py
+          git diff --exit-code -- examples/broken-post-clipboard.shortcut
+
+      - name: The fixer must refuse to write while design errors remain
+        run: |
+          if python scripts/fix_shortcut.py examples/broken-post-clipboard.shortcut -o "output/fixed.shortcut"; then
+            echo "::error::fix_shortcut.py wrote a file while design errors remain"
+            exit 1
+          fi
+          if [ -f "output/fixed.shortcut" ]; then
+            echo "::error::fix_shortcut.py produced output despite failing"
+            exit 1
+          fi
+          echo "fixer correctly refused to write"
+
+  lint-rules:
+    name: lint rules are documented
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every lint code has a reference entry
+        run: |
+          python - <<'PY'
+          import re, sys, pathlib
+          rules = pathlib.Path("references/lint-rules.md").read_text(encoding="utf-8")
+          src = pathlib.Path("scripts/validate_shortcut.py").read_text(encoding="utf-8")
+          used = set(re.findall(r'"((?:E|W|I)_[A-Z_]+)"', src))
+          documented = set(re.findall(r'`((?:E|W|I)_[A-Z_]+)`', rules))
+          missing = sorted(used - documented)
+          if missing:
+              print("undocumented lint codes:", ", ".join(missing))
+              sys.exit(1)
+          print("all %d lint codes are documented" % len(used))
+          PY
