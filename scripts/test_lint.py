@@ -185,5 +185,148 @@ if os.path.exists(_fixture_spec):
     check("fixture fails on macOS with 5 errors", len(_rm.by("error")) == 5, str(len(_rm.by("error"))))
     check("platform-only error is macOS_ONLY", "E_MACOS_ONLY" in _r.codes("error") and "E_MACOS_ONLY" not in _rm.codes("error"))
 
+# ---------------------------------------------------------------------------
+# Regressions from the 5-issue review. Each one shipped broken before; these
+# checks exist so they cannot come back.
+# ---------------------------------------------------------------------------
+
+import fix_shortcut  # noqa: E402
+import json  # noqa: E402
+
+# --- 1. the fixer must never re-bind variables -----------------------------
+# A plist may list its attachmentsByRange keys in any order. Re-binding
+# attachments positionally swaps the variables: the file still imports and
+# lints clean, but every value lands in the wrong field.
+
+_UA = "7F3A4E91-C2D8-4B56-BE5A-0242AC120002"
+_UB = "3B1C2D4E-5F60-4718-8293-A4B5C6D7E8F9"
+
+
+def _ref(uuid, name):
+    return {"Type": "ActionOutput", "OutputUUID": uuid, "OutputName": name}
+
+
+def _swap_workflow(abr):
+    return {
+        "WFWorkflowName": "Swap",
+        "WFWorkflowActions": [
+            {"WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+             "WFWorkflowActionParameters": {"UUID": _UA, "CustomOutputName": "name"}},
+            {"WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+             "WFWorkflowActionParameters": {"UUID": _UB, "CustomOutputName": "age"}},
+            {"WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+             "WFWorkflowActionParameters": {"UUID": "9E8D7C6B-5A49-4382-9170-6F5E4D3C2B1A",
+              "WFTextActionText": tok("Hello " + PH + " age " + PH, abr)}},
+        ],
+        "WFWorkflowIcon": ICON,
+    }
+
+
+def _abr_of(wf):
+    return wf["WFWorkflowActions"][2]["WFWorkflowActionParameters"]["WFTextActionText"]["Value"]["attachmentsByRange"]
+
+
+# one bad offset -> the single unanchored ref must take the single free slot
+_bad = fix_shortcut.fix(_swap_workflow({"{14, 1}": _ref(_UB, "age"), "{6, 1}": _ref(_UA, "name")}), "ios", 26)
+_fixed = _abr_of(_bad)
+check("fixer repairs a single bad offset without swapping variables",
+      _fixed.get("{6, 1}", {}).get("OutputName") == "name"
+      and _fixed.get("{12, 1}", {}).get("OutputName") == "age",
+      json.dumps(_fixed, sort_keys=True))
+check("repaired token string lints clean", not validate(_bad, target="ios").by("error"))
+
+# a correct file whose ranges happen to be listed out of order must be untouched
+_ok = _swap_workflow({"{12, 1}": _ref(_UB, "age"), "{6, 1}": _ref(_UA, "name")})
+_untouched = fix_shortcut.fix(_ok, "ios", 26)
+check("fixer leaves an out-of-order but correct token string alone",
+      _abr_of(_untouched) == _abr_of(_ok))
+check("out-of-order token string is not an error", not validate(_ok, target="ios").by("error"))
+
+# two broken offsets -> ambiguous, so the fixer must not guess
+_amb = _swap_workflow({"{99, 1}": _ref(_UB, "age"), "{98, 1}": _ref(_UA, "name")})
+check("fixer refuses an ambiguous token string",
+      _abr_of(fix_shortcut.fix(_amb, "ios", 26)) == _abr_of(_amb))
+check("ambiguous token string is still reported", has(validate(_amb, target="ios"), "E_TOKEN_RANGE"))
+
+# --- 2. control-flow blocks must nest, not cross --------------------------
+
+def _cond(gid, mode, uid):
+    p = {"UUID": uid, "GroupingIdentifier": gid, "WFControlFlowMode": mode}
+    if mode == 0:
+        p["WFCondition"] = 100
+        p["WFInput"] = {"Type": "Variable",
+                        "Variable": {"Value": {"Type": "ExtensionInput"},
+                                     "WFSerializationType": "WFTextTokenAttachment"}}
+    return {"WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
+            "WFWorkflowActionParameters": p}
+
+
+_cross = {"WFWorkflowActions": [
+    _cond("g1", 0, _UA), _cond("g2", 0, _UB),
+    _cond("g1", 2, "AA000000-0000-4000-8000-000000000001"),
+    _cond("g2", 2, "AA000000-0000-4000-8000-000000000002")], "WFWorkflowIcon": ICON}
+check("crossing control-flow blocks are caught", has(validate(_cross, target="ios"), "E_GROUP_NESTING"))
+
+_nested = {"WFWorkflowActions": [
+    _cond("g1", 0, _UA), _cond("g2", 0, _UB),
+    _cond("g2", 2, "AA000000-0000-4000-8000-000000000001"),
+    _cond("g1", 2, "AA000000-0000-4000-8000-000000000002")], "WFWorkflowIcon": ICON}
+check("properly nested blocks are not flagged", not has(validate(_nested, target="ios"), "E_GROUP_NESTING"))
+
+_orphan_branch = {"WFWorkflowActions": [_cond("g1", 1, _UA)], "WFWorkflowIcon": ICON}
+check("an Otherwise with no open block is caught", has(validate(_orphan_branch, target="ios"), "E_ORPHAN_BRANCH"))
+
+# --- 3. {input} must work inside text fields ------------------------------
+
+_in_spec = {"name": "Input Test", "actions": [{"do": "show", "text": "You said {input}"}]}
+_in_wf = build(_in_spec).to_plist()
+_in_txt = _in_wf["WFWorkflowActions"][0]["WFWorkflowActionParameters"]["Text"]
+check("{input} in a text field becomes a token string",
+      _in_txt.get("WFSerializationType") == "WFTextTokenString")
+check("{input} in a text field lints clean", not validate(_in_wf, target="ios").by("error"))
+
+# --- 4. download bodies must carry attachments ----------------------------
+
+_dl = build({"name": "Post", "actions": [
+    {"do": "getclipboard", "as": "clip"},
+    {"do": "download", "url": "https://api.example.com/post", "method": "POST", "as": "resp",
+     "extra": {"WFRequestBody": {"Value": "payload: {clip}"}}}]}).to_plist()
+_body = _dl["WFWorkflowActions"][1]["WFWorkflowActionParameters"]["WFRequestBody"]
+check("download request body becomes a token string",
+      isinstance(_body, dict) and _body.get("WFSerializationType") == "WFTextTokenString",
+      json.dumps(_body, default=str))
+check("download request body keeps no literal braces",
+      not (isinstance(_body, dict) and isinstance(_body.get("Value"), dict)
+           and "{" in _body["Value"].get("string", "")))
+check("download body lints clean", not validate(_dl, target="ios").by("error"))
+
+# --- 5. custom icons must use real plist keys -----------------------------
+
+_friendly = build({"name": "Icon", "icon": {"glyph": 61440, "color": 431817727},
+                   "actions": [{"do": "comment", "text": "x"}]}).to_plist()
+check("friendly icon keys become real plist keys",
+      _friendly["WFWorkflowIcon"] == {"WFWorkflowIconGlyphNumber": 61440, "WFWorkflowIconStartColor": 431817727},
+      json.dumps(_friendly["WFWorkflowIcon"]))
+check("friendly icon lints clean", not validate(_friendly, target="ios").by("error"))
+_raw = build({"name": "Icon2", "icon": {"WFWorkflowIconGlyphNumber": 59511},
+              "actions": [{"do": "comment", "text": "x"}]}).to_plist()
+check("raw plist icon keys are still accepted",
+      _raw["WFWorkflowIcon"] == {"WFWorkflowIconGlyphNumber": 59511})
+_bad_icon = {"WFWorkflowActions": [{"WFWorkflowActionIdentifier": "is.workflow.actions.comment",
+                                    "WFWorkflowActionParameters": {"UUID": _UA, "WFCommentActionText": "x"}}],
+             "WFWorkflowIcon": {"glyph": 61440, "color": 431817727}}
+check("unknown icon keys are an error", has(validate(_bad_icon, target="ios"), "E_ICON_KEYS"))
+
+# --- 6. an attachment must agree with the action that produced it ---------
+
+_mismatch = {"WFWorkflowActions": [
+    {"WFWorkflowActionIdentifier": "is.workflow.actions.getclipboard",
+     "WFWorkflowActionParameters": {"UUID": _UA, "CustomOutputName": "name"}},
+    {"WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+     "WFWorkflowActionParameters": {"UUID": _UB,
+      "WFTextActionText": tok("Hello " + PH, {"{6, 1}": _ref(_UA, "wrongName")})}}],
+    "WFWorkflowIcon": ICON}
+check("an attachment naming the wrong output is caught", has(validate(_mismatch, target="ios"), "E_TOKEN_REF"))
+
 print("\n%d/%d passed" % (sum(RESULTS), len(RESULTS)))
 sys.exit(0 if all(RESULTS) else 1)

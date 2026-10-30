@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.0.1] — 2026-10-30
+
+Five defects found in a review of `v1.0.0`. All are fixed, each with a regression test.
+
+### Fixed
+
+- **The fixer could swap variables and report success.** `fix_shortcut.py` re-bound token attachments to placeholders *positionally*. Because a plist may list its `attachmentsByRange` keys in any order, this swapped two variables: the file imported cleanly, linted clean, and every value landed in the wrong field. The fixer now keeps every attachment bound to the placeholder it already sits on, and only moves an attachment whose offset is not a placeholder at all — and only when exactly one placeholder is left unclaimed, so the mapping is forced and provable. Ambiguous cases are left untouched and stay flagged.
+- **Invalid block nesting passed validation.** Control flow was checked by counting openers and closers per group, which cannot see crossing blocks. The linter now walks a stack of open blocks: `E_GROUP_NESTING` for crossing blocks, `E_ORPHAN_BRANCH` for an Otherwise/menu case with no open block.
+- **`{input}` failed inside text fields.** The builder only resolved `{input}` in whole-value inputs; a text field raised `unknown placeholder`. `{input}` now resolves to the Shortcut Input in text fields too.
+- **Download request bodies kept placeholders as literal text.** `download(..., extra=...)` merged extra parameters verbatim. Extra parameters are now resolved recursively, and the `{"Value": "text"}` shape is promoted to a real `WFTextTokenString`, so a request body carries an attachment instead of literal braces.
+- **Custom icons used incorrect output keys.** A spec written as `{"icon": {"glyph": …, "color": …}}` emitted those keys verbatim into the plist; the shortcut imported with a generic icon and only a warning to explain it. The builder now normalises friendly *and* raw keys to `WFWorkflowIconGlyphNumber` / `WFWorkflowIconStartColor`, and `E_ICON_KEYS` reports unknown icon keys as an error.
+
+### Added
+
+- `E_TOKEN_REF` — an attachment that names a different output than the action it points at produces.
+- `E_ICON_KEYS` — `WFWorkflowIcon` containing keys that are not real plist keys.
+- `E_GROUP_NESTING`, `E_ORPHAN_BRANCH` — control-flow structure checks.
+- `W_LITERAL_PLACEHOLDER` — a `{name}` left as literal text in a field that interpolates.
+- The lint test suite grew from 30 to **49 checks**, including a regression for each defect above.
+
 ## [1.0.0] — 2026-10-30
 
 First public release — a hybrid skill combining a deep, target-aware linter, a JSON spec builder, and field debugging guidance in one dependency-free Python toolchain.

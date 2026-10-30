@@ -10,9 +10,10 @@
     "minimumClientVersion": { "type": "integer", "default": 900, "description": "WFWorkflowMinimumClientVersion. 900 = broad compat (iOS 14+). >=1100 means iOS 15+, which requires a signed file to import." },
     "icon": {
       "type": "object",
+      "description": "Custom icon. Both the friendly keys (glyph/color) and the raw plist keys are accepted and normalised to WFWorkflowIconGlyphNumber / WFWorkflowIconStartColor.",
       "properties": {
-        "glyph": { "type": "integer", "description": "WFWorkflowIconGlyphNumber (SF Symbol code)", "default": 61440 },
-        "color": { "type": "integer", "description": "WFWorkflowIconStartColor (int-encoded color)", "default": 431817727 }
+        "glyph": { "type": "integer", "description": "WFWorkflowIconGlyphNumber (SF Symbol code), or use the raw key WFWorkflowIconGlyphNumber", "default": 61440 },
+        "color": { "type": "integer", "description": "WFWorkflowIconStartColor (int-encoded color), or use the raw key WFWorkflowIconStartColor", "default": 431817727 }
       }
     },
     "types": { "type": "array", "items": { "type": "string" }, "description": "WFWorkflowTypes, e.g. [\"ActionExtension\"] to show in the share sheet, [\"NCWidget\"] for widgets." },
@@ -55,7 +56,7 @@
           "input": { "description": "'{outputName}', '$input'/'{input}', '$var:VariableName', or raw plist dict" },
           "url": { "type": "string" },
           "method": { "type": "string", "default": "GET" },
-          "extra": { "type": "object", "description": "download: extra WFWorkflowActionParameters (headers, body, ...)" },
+          "extra": { "type": "object", "description": "download: extra WFWorkflowActionParameters (headers, body, ...). Placeholders are resolved, so {name} becomes a real attachment — including inside a request body written as {\"Value\": \"text with {name}\"}." },
           "seconds": { "type": "number", "default": 1 },
           "key": { "type": "string", "description": "getdict: dictionary key, dot paths allowed" },
           "condition": { "type": "integer", "default": 100, "description": "if: WFCondition code — 0 <, 1 <=, 2 >, 3 >= (numeric, WFNumberValue); 4 is, 5 is not, 8 begins with, 9 ends with, 99 contains, 999 does not contain (string, WFConditionalActionString); 100 has any value, 101 no value; 1002 is today, 1003 between" },

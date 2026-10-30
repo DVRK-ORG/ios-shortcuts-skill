@@ -27,6 +27,8 @@ proven by `scripts/test_lint.py` (`py scripts/test_lint.py`).
 | `E_GROUPING_ID` | Control-flow action missing/empty `GroupingIdentifier` | Set a UUID string shared by the block |
 | `E_UNCLOSED_GROUP` | Control-flow block never closes | Add the matching end action (mode 2, same `GroupingIdentifier`) |
 | `E_ORPHAN_END` | End action with no opener | Remove it or restore the opener |
+| `E_ORPHAN_BRANCH` | Otherwise / menu case with no open block | Remove the branch or restore its opener |
+| `E_GROUP_NESTING` | Control-flow blocks cross instead of nesting | Close the inner block before the outer one |
 | `E_GROUP_ID_MISMATCH` | End-block identifier differs from the opener's | Reuse the opener's identifier for mode 2 |
 | `E_COND_NO_INPUT` | If action has no `WFInput` | Wire the variable being tested |
 | `E_COND_LITERAL` | Condition code needs a literal field that is missing | Add `WFConditionalActionString` (string codes) or `WFNumberValue` (numeric codes) |
@@ -34,10 +36,30 @@ proven by `scripts/test_lint.py` (`py scripts/test_lint.py`).
 | `E_MATH_OP` | `WFMathOperation` is ASCII `*` or `/` | Use `×` (U+00D7) or `÷` (U+00F7) |
 | `E_EMPTY_LOCATION` | Location parameter blank | Wire a real location output |
 | `E_TOKEN_RANGE` | Attachment offsets do not line up with the U+FFFC placeholders | Recompute offsets (UTF-16 code units, length 1) |
+| `E_TOKEN_REF` | An attachment names a different output than the action produces | Point the attachment at the right action |
+| `E_ICON_KEYS` | `WFWorkflowIcon` has keys that are not real plist keys | Use `WFWorkflowIconGlyphNumber` / `WFWorkflowIconStartColor` |
 | `E_DANGLING_REF` | Reference to an `OutputUUID` no action declares | Fix the UUID or add the missing action |
 
-Machine-repairable by `scripts/fix_shortcut.py`: `E_MATH_OP`, parseable
-`E_TOKEN_RANGE`, `W_ICON_COLOR`. Everything else needs a design decision.
+Machine-repairable by `scripts/fix_shortcut.py`: `E_MATH_OP`, the unambiguous
+subset of `E_TOKEN_RANGE` (see below), `W_ICON_COLOR`. Everything else needs a
+design decision.
+
+### What the fixer will and will not touch in a token string
+
+A `.shortcut` plist may list its `attachmentsByRange` keys in **any order**, so
+the position of a key says nothing about which variable belongs at which
+placeholder. The fixer therefore never re-binds attachments positionally — that
+silently swaps variables: the file still imports, still lints clean, and every
+value lands in the wrong field.
+
+The only token repair it performs is provable:
+
+- An attachment already sitting on a placeholder **stays there**.
+- An attachment whose offset is *not* a placeholder may move, but only when
+  exactly one placeholder is left unclaimed — then the mapping is forced.
+- With two or more unanchored attachments the mapping is ambiguous, so the
+  fixer leaves the file alone and the linter keeps reporting `E_TOKEN_RANGE`.
+
 
 ## Warnings — judge each one
 
@@ -60,6 +82,7 @@ Machine-repairable by `scripts/fix_shortcut.py`: `E_MATH_OP`, parseable
 | `W_NO_INPUT` | Action has no input wired and no `CustomOutputName` |
 | `W_EMPTY_FIELD` | A required text parameter is an empty string |
 | `W_TOKEN_NO_ATTACH` | Token string contains U+FFFC but `attachmentsByRange` is empty |
+| `W_LITERAL_PLACEHOLDER` | A `{name}` placeholder is literal text in a field that interpolates — the device will show the braces |
 | `W_FORWARD_REF` | References an action that runs **later** — the value will be empty |
 | `W_NO_VISIBLE_OUTPUT` | The shortcut ends on a data action, so running it shows the user nothing |
 | `W_GROUP_MULTI` | More than one opener in a control-flow group |
@@ -109,3 +132,16 @@ actions that need the newer OS.
   at the end.
 - **`W_NO_VISIBLE_OUTPUT`** does not fire when the last action is a
   control-flow end (mode 2), since the real output sits inside the block.
+- **`W_LITERAL_PLACEHOLDER`** only fires on fields that genuinely interpolate
+  (`WFTextActionText`, `WFAlertActionMessage`, `WFNotificationActionBody`,
+  `Text`, `WFSendMessageContent`, `WFRequestBody`, `WFURL`,
+  `WFURLActionURL`). Literal fields such as the Ask prompt, a comment, a
+  regex, or a dictionary key are never flagged — braces there are text.
+- **`E_TOKEN_REF`** compares an attachment's `OutputName` with the
+  `CustomOutputName` of the action its `OutputUUID` points at. It stays quiet
+  when either side is unnamed, so a reference to an unnamed action is never
+  reported.
+- **`E_ICON_KEYS`** fires on any `WFWorkflowIcon` key other than
+  `WFWorkflowIconGlyphNumber` and `WFWorkflowIconStartColor`. The spec
+  builder accepts the friendly `glyph` / `color` keys and converts them, so
+  this only fires on hand-edited or third-party files.

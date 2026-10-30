@@ -30,6 +30,18 @@
       "prompt": "I have no Mac — I am on Windows. Make me a shortcut that opens the first link in my clipboard and get it onto my iPhone.",
       "expected_output": "Does NOT promise an importable .shortcut (iOS 15+ imports signed files only; only macOS signs) and says so early. Builds examples/open-first-url.json on Windows (getclipboard -> detectlinks -> if condition 100 -> firstitem -> openurl, else alert), lints 0 errors for --target ios, inspects the action list, then delivers the honest hand-off: a numbered Shortcuts.app build recipe and/or the unsigned file plus the one-line `shortcuts sign --mode anyone` command for any borrowed Mac, or an iCloud-link path once it exists on a device.",
       "files": ["examples/open-first-url.json"]
+    },
+    {
+      "id": 6,
+      "prompt": "Here is a .shortcut whose variables look wrong: the 'age' value shows up where the 'name' should be. The file imports fine and the editor shows no error. Can you repair it?",
+      "expected_output": "Understands that a token string's attachmentsByRange key order carries no meaning, and that the bug is a swapped attachment rather than a bad offset. Uses fix_shortcut.py, which keeps every attachment bound to the placeholder it already occupies and only moves an attachment whose offset is not a placeholder — never re-binding positionally, which is what caused the swap. Explains that an ambiguous token string (two or more unanchored attachments) is deliberately left alone and still reported as E_TOKEN_RANGE, and that the agent must not hand-patch a binary plist but change the spec, rebuild and re-lint. Does NOT claim a repaired file is importable on iOS 15+ without signing.",
+      "files": ["examples/broken-post-clipboard.shortcut"]
+    },
+    {
+      "id": 7,
+      "prompt": "Build me a shortcut that reads a URL from the clipboard, POSTs the clipboard contents as a JSON body, and shows the response. Put the API key in a variable.",
+      "expected_output": "Builds from a spec where the download's extra parameters carry the request body, and the body resolves to a real WFTextTokenString with an attachment rather than literal {name} text — the spec layer promotes the {\"Value\": \"...\"} shape and resolves placeholders recursively. Wires the API key as a variable rather than a hardcoded secret (see SECURITY.md). Lints 0 errors for --target ios, inspects the action list, and states that iOS 15+ import needs a signed file from a Mac.",
+      "files": ["assets/spec.schema.json"]
     }
   ]
 }

@@ -43,13 +43,7 @@ def _resolve_params(value, builder):
     """Resolve {name} placeholders inside raw parameter values against earlier
     action outputs: strings with placeholders become token strings, and any
     nested dict/list is walked so raw actions get the same wiring as typed ones."""
-    if isinstance(value, str):
-        return builder._text(value)
-    if isinstance(value, list):
-        return [_resolve_params(v, builder) for v in value]
-    if isinstance(value, dict):
-        return {k: _resolve_params(v, builder) for k, v in value.items()}
-    return value
+    return builder._resolve(value)
 
 
 def build(spec: dict) -> ShortcutBuilder:

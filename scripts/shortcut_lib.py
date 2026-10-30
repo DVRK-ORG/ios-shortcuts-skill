@@ -110,6 +110,29 @@ def maybe_token_string(text, refs):
     return text
 
 
+ICON_PLIST_KEYS = ("WFWorkflowIconGlyphNumber", "WFWorkflowIconStartColor")
+
+
+def normalize_icon(icon):
+    """Normalize a spec icon into real WFWorkflowIcon plist keys.
+
+    Accepts both the friendly spec keys ("glyph", "color") and the raw plist
+    keys, so a spec written either way produces a valid icon. Without this the
+    friendly keys are written into the plist verbatim, the shortcut imports with
+    a generic icon, and nothing in the file says why.
+    """
+    if not isinstance(icon, dict):
+        return None
+    out = {}
+    glyph = icon.get("glyph", icon.get("WFWorkflowIconGlyphNumber"))
+    color = icon.get("color", icon.get("WFWorkflowIconStartColor"))
+    if glyph is not None:
+        out["WFWorkflowIconGlyphNumber"] = glyph
+    if color is not None:
+        out["WFWorkflowIconStartColor"] = color
+    return out or None
+
+
 class ShortcutBuilder:
     """Assembles the WFWorkflow dict and serializes it to a .shortcut plist."""
 
@@ -129,7 +152,10 @@ class ShortcutBuilder:
         self.client_version = client_version
         self.minimum_client_version = minimum_client_version
         # Widely used defaults: SF Symbol glyph + start color as ints.
-        self.icon = icon or {"WFWorkflowIconGlyphNumber": 61440, "WFWorkflowIconStartColor": 431817727}
+        self.icon = normalize_icon(icon) or {
+            "WFWorkflowIconGlyphNumber": 61440,
+            "WFWorkflowIconStartColor": 431817727,
+        }
         self.types = types if types is not None else []
         self.input_classes = input_classes if input_classes is not None else ["WFStringContentItem"]
         self.output_classes = output_classes if output_classes is not None else []
@@ -180,7 +206,33 @@ class ShortcutBuilder:
         raise ValueError("bad input spec: %r" % (spec,))
 
     def _text(self, text):
-        return maybe_token_string(text, self.refs)
+        """Build a text value, resolving {placeholders} into token strings.
+
+        The built-in {input} placeholder always resolves to the Shortcut Input
+        (share-sheet input). An action named as="input" takes precedence.
+        """
+        refs = dict(self.refs)
+        refs.setdefault("input", extension_input())
+        return maybe_token_string(text, refs)
+
+    def _resolve(self, value):
+        """Recursively resolve placeholders in a parameter payload.
+
+        Strings become token strings, nested dicts/lists are walked, and the
+        {"Value": "<text>"} shape is promoted to a real WFTextTokenString so a
+        request body carries an attachment instead of literal braces.
+        """
+        if isinstance(value, str):
+            return self._text(value)
+        if isinstance(value, list):
+            return [self._resolve(v) for v in value]
+        if isinstance(value, dict):
+            if set(value.keys()) == {"Value"} and isinstance(value["Value"], str):
+                refs = dict(self.refs)
+                refs.setdefault("input", extension_input())
+                return token_string(value["Value"], refs)
+            return {k: self._resolve(v) for k, v in value.items()}
+        return value
 
     # ------------------------------------------------------------- convenience actions
     def text(self, text, as_name=None):
@@ -195,13 +247,13 @@ class ShortcutBuilder:
     def alert(self, title, message):
         return self.raw(
             A + "alert",
-            {"WFAlertActionTitle": title, "WFAlertActionMessage": self._text(message)},
+            {"WFAlertActionTitle": self._text(title), "WFAlertActionMessage": self._text(message)},
         )
 
     def notify(self, body, title=None, sound=True):
         p = {"WFNotificationActionBody": self._text(body), "WFNotificationActionSound": bool(sound)}
         if title:
-            p["WFNotificationActionTitle"] = title
+            p["WFNotificationActionTitle"] = self._text(title)
         return self.raw(A + "notification", p)
 
     def ask(self, prompt, input_type="Text", as_name=None):
@@ -228,7 +280,10 @@ class ShortcutBuilder:
     def download(self, url_text, method="GET", as_name=None, extra=None):
         p = {"WFURL": self._text(url_text), "WFHTTPMethod": method}
         if extra:
-            p.update(extra)
+            # The request body and any other extra parameter may reference
+            # earlier outputs; resolve them so they ship as attachments rather
+            # than literal "{name}" text.
+            p.update(self._resolve(extra))
         return self.raw(A + "downloadurl", p, as_name)
 
     def quicklook(self):

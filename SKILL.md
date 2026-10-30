@@ -16,7 +16,7 @@ disable-model-invocation: false
 license: MIT
 compatibility: Python 3.9+ standard library only; no third-party packages. macOS-only for signing (shortcuts sign) and on-device GUI import.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   author: "By DVRRK (DVRK-ORG)"
   format: "Agent Skills (SKILL.md)"
 ---
@@ -57,7 +57,9 @@ with zero dependencies. Only signing and on-device testing need Apple hardware.
   invisible U+FFFC (`￼`) placeholder in the string plus its exact **UTF-16
   code-unit offset** in `attachmentsByRange` (length always 1; an emoji before
   the placeholder counts as 2). The spec builder computes offsets for you —
-  never hand-place them.
+  never hand-place them. A plist may list its range keys in any order, so the
+  key position says nothing: **never re-bind attachments to placeholders by
+  position**, that swaps variables silently.
 - **UUIDs.** Every action gets a unique, real, uppercase `UUID`. References
   point at an action that has **already run**; pointing forward = silently
   empty value. Duplicates and `AAAAAAAA-…` placeholders are fatal.
@@ -74,7 +76,8 @@ with zero dependencies. Only signing and on-device testing need Apple hardware.
 - **Control flow.** `GroupingIdentifier` (UUID string) + integer
   `WFControlFlowMode` (0 open / 1 middle / 2 close); the closer reuses the
   opener's identifier *and* action identifier. An unclosed block corrupts
-  everything after it.
+  everything after it. Blocks must **nest**: close the inner block first, or
+  the file is malformed (`E_GROUP_NESTING`).
 - **Math.** Addition omits `WFMathOperation`; division is `÷` (U+00F7),
   multiplication is `×` (U+00D7). ASCII `/` or `*` silently renders as `+`.
 - **Platform gating.** `runshellscript`, `runapplescript`,
@@ -94,8 +97,8 @@ with zero dependencies. Only signing and on-device testing need Apple hardware.
 | `scripts/build_shortcut.py` | JSON spec → unsigned `.shortcut` (binary; `--xml` for review). Auto-lints, refuses errors. `--seed` for reproducible builds. |
 | `scripts/validate_shortcut.py` | Target/OS-aware lint with stable codes (`E_*`, `W_*`, `I_*`). `--target ios|macos|both`, `--min-os N`, `--json`, `--fail-on-warning`. Exit 1 on errors. |
 | `scripts/inspect_shortcut.py` | Human-readable numbered action dump; `--json` for the raw plist. |
-| `scripts/fix_shortcut.py` | Provably-safe machine repairs only (math operators, token offsets, icon colour). Refuses to write while design errors remain. |
-| `scripts/test_lint.py` | Proves the linter catches every failure mode it claims (30 checks). Run after changing rules. |
+| `scripts/fix_shortcut.py` | Provably-safe machine repairs only (math operators, unambiguous token offsets, icon colour). Never re-binds variables, and refuses to write while design errors remain. |
+| `scripts/test_lint.py` | Proves the linter catches every failure mode it claims (49 checks). Run after changing rules. |
 | `scripts/make_fixture.py` | Regenerates the deliberately-broken demo fixture (deterministic — byte-identical every run). |
 | `scripts/shortcut_lib.py` | Spec engine: token strings, control flow, typed convenience actions. |
 

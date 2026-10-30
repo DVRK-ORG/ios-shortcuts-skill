@@ -131,6 +131,15 @@ EMPTY_TEXT_KEYS = {
     "WFTextActionText", "WFAlertActionTitle", "WFNotificationTitle", "WFAskActionPrompt",
     "WFCommentActionText", "WFVariableName",
 }
+ICON_KEYS = {"WFWorkflowIconGlyphNumber", "WFWorkflowIconStartColor"}
+
+# Fields whose {placeholder} always means "a variable goes here". A brace left
+# as literal text in one of these is a placeholder that never got wired.
+INTERPOLATED_KEYS = {
+    "WFTextActionText", "WFAlertActionMessage", "WFNotificationActionBody", "Text",
+    "WFSendMessageContent", "WFRequestBody", "WFURL", "WFURLActionURL",
+}
+LITERAL_PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*\}")
 
 
 # --- traversal helpers -------------------------------------------------------
@@ -230,6 +239,10 @@ def validate(plist, target="ios", min_os=26):
             f.warn("W_ICON_GLYPH", "WFWorkflowIcon is missing WFWorkflowIconGlyphNumber.")
         if icon.get("WFWorkflowIconStartColor") is None:
             f.warn("W_ICON_COLOR", "WFWorkflowIcon is missing WFWorkflowIconStartColor.")
+        unknown_icon_keys = [k for k in icon if k not in ICON_KEYS]
+        if unknown_icon_keys:
+            f.error("E_ICON_KEYS", "WFWorkflowIcon contains unknown key(s) %s. The icon keys must be WFWorkflowIconGlyphNumber and WFWorkflowIconStartColor — a friendly key like 'glyph' or 'color' is not a valid plist key and the icon silently renders as a generic one."
+                    % ", ".join(repr(k) for k in sorted(unknown_icon_keys)))
     if not plist.get("WFWorkflowInputContentItemClasses"):
         f.note("I_NO_INPUT_CLASSES", "No WFWorkflowInputContentItemClasses — the shortcut declares no accepted input types.")
     if "WFWorkflowTypes" in plist and not isinstance(plist.get("WFWorkflowTypes"), list):
@@ -391,15 +404,69 @@ def validate(plist, target="ios", min_os=26):
                 f.error("E_TOKEN_RANGE", "Token string at %s: %s." % (path, "; ".join(bad)), i, ident)
             if PLACEHOLDER in s and not abr:
                 f.warn("W_TOKEN_NO_ATTACH", "Token string at %s contains U+FFFC but attachmentsByRange is empty." % path, i, ident)
+            # the attachment must agree with the action that produced it
+            for ref in abr.values():
+                if not isinstance(ref, dict) or ref.get("Type") != "ActionOutput":
+                    continue
+                out_uuid = ref.get("OutputUUID")
+                if not out_uuid or out_uuid not in uuids:
+                    continue  # dangling refs are reported separately
+                producer = actions[uuids[out_uuid]]
+                p_params = producer.get("WFWorkflowActionParameters") or {}
+                produced_name = p_params.get("CustomOutputName")
+                used_name = ref.get("OutputName")
+                if produced_name and used_name and produced_name != used_name:
+                    f.error("E_TOKEN_REF", 'Token string at %s references action[%d] but calls its output %r; that action produces %r. The attachment points at the wrong output.'
+                            % (path, uuids[out_uuid], used_name, produced_name), i, ident)
 
-    # control-flow balance: every opener needs a matching closer, same identifier
+        # a {placeholder} left as literal text in an interpolated field
+        for k, v in params.items():
+            if k in INTERPOLATED_KEYS and isinstance(v, str):
+                m = LITERAL_PLACEHOLDER_RE.search(v)
+                if m:
+                    f.warn("W_LITERAL_PLACEHOLDER", 'Parameter "%s" contains %s as literal text. A {placeholder} must be a WFTextTokenString with an attachment, otherwise the device shows the braces literally.'
+                            % (k, m.group(0)), i, ident)
+
+    # control-flow balance AND nesting: blocks must nest, not cross.
+    # A stack is the only way to see crossing blocks — per-group counting
+    # cannot tell "g1 opens, g2 opens, g1 closes" from two independent blocks.
+    stack = []  # [(gid, index, ident)]
+    for i, act in enumerate(actions):
+        if not isinstance(act, dict):
+            continue
+        params = act.get("WFWorkflowActionParameters")
+        if not isinstance(params, dict):
+            continue
+        ident = act.get("WFWorkflowActionIdentifier") or ""
+        mode = params.get("WFControlFlowMode")
+        gid = params.get("GroupingIdentifier")
+        if not isinstance(mode, int) or isinstance(mode, bool):
+            continue
+        if not isinstance(gid, str) or not gid:
+            continue
+        if mode == 0:
+            stack.append((gid, i, ident))
+        elif mode == 1:
+            if not any(s[0] == gid for s in stack):
+                f.error("E_ORPHAN_BRANCH", 'action[%d] is an Otherwise/menu case for group "%s", but no open block with that identifier exists.' % (i, gid), i, ident)
+            elif stack[-1][0] != gid:
+                f.error("E_GROUP_NESTING", 'action[%d] branches on group "%s", but the innermost open block is "%s". A branch must belong to the block that encloses it.' % (i, gid, stack[-1][0]), i, ident)
+        elif mode == 2:
+            if not stack:
+                f.error("E_ORPHAN_END", 'action[%d] closes group "%s", but no control-flow block is open.' % (i, gid), i, ident)
+            elif stack[-1][0] != gid:
+                if any(s[0] == gid for s in stack):
+                    f.error("E_GROUP_NESTING", 'action[%d] closes group "%s" while group "%s" is still open. Control-flow blocks must nest — close the inner block first.' % (i, gid, stack[-1][0]), i, ident)
+                else:
+                    f.error("E_ORPHAN_END", 'action[%d] closes group "%s", which was never opened.' % (i, gid), i, ident)
+            else:
+                stack.pop()
+    for gid, idx, ident in stack:
+        f.error("E_UNCLOSED_GROUP", 'Control-flow group "%s" opens at action[%d] but never closes. Add a matching end action with the same GroupingIdentifier.' % (gid, idx), idx, ident)
+
+    # per-group checks the stack cannot express
     for gid, members in groups.items():
         starts = [m for m in members if m[2] == 0]
-        ends = [m for m in members if m[2] == 2]
-        if starts and not ends:
-            f.error("E_UNCLOSED_GROUP", 'Control-flow group "%s" opens at action[%d] but never closes. Add a matching end action with the same GroupingIdentifier.' % (gid, starts[0][0]), starts[0][0], starts[0][1])
-        if ends and not starts:
-            f.error("E_ORPHAN_END", 'Control-flow group "%s" has an end action at action[%d] but no opener.' % (gid, ends[0][0]), ends[0][0], ends[0][1])
         if len(starts) > 1:
             f.warn("W_GROUP_MULTI", 'Control-flow group "%s" has %d openers.' % (gid, len(starts)), starts[1][0], starts[1][1])
         opener_ids = {m[1] for m in members if m[2] == 0}

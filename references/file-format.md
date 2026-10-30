@@ -33,7 +33,7 @@ A property list (plist). Three flavours matter:
 | `WFWorkflowClientRelease` | string | e.g. `"2773"`. |
 | `WFWorkflowMinimumClientVersion` | int | `900` = broad compat (iOS 14+). `1100`+ = iOS 15+ (implies signed-file import). |
 | `WFWorkflowMinimumClientVersionString` | string | String form of the above. |
-| `WFWorkflowIcon` | dict | `WFWorkflowIconGlyphNumber` + `WFWorkflowIconStartColor`. Both required for a custom icon. |
+| `WFWorkflowIcon` | dict | `WFWorkflowIconGlyphNumber` + `WFWorkflowIconStartColor`. Both required for a custom icon. These are the **only** valid keys — a friendly key such as `glyph` or `color` is written verbatim by a naive builder, the shortcut imports with a generic icon, and nothing in the file says why. The spec builder accepts either form and normalises it; the linter reports unknown icon keys as `E_ICON_KEYS`. |
 | `WFWorkflowInputContentItemClasses` | array | Accepted input types — legacy `WF*ContentItem` names or UTIs such as `public.plain-text`, `public.url`, `public.image`. |
 | `WFWorkflowTypes` | array | Surfaces: `ActionExtension` (share sheet), `NCWidget`, `WatchKit`. `[]` = library only. |
 | `WFQuickActionSurfaces` | array | Where it appears as a Quick Action. |
@@ -91,6 +91,23 @@ action's output by that action's `UUID`.
 Other `Type` values: `Variable` (`VariableName`), `ExtensionInput` (the
 shortcut's own input — never emit the legacy `is.workflow.actions.input`
 action), `Ask`, `Clipboard`, `CurrentDate`, `DeviceDetails`, `CurrentApp`.
+
+`ExtensionInput` works **anywhere** a value can be referenced, not just as a
+whole-value input. Inside a text field it appears as an attachment inside the
+token string, exactly like an action output:
+
+```
+"WFTextActionText": {
+  "Value": {
+    "string": "You said ￼",
+    "attachmentsByRange": { "{9, 1}": { "Value": { "Type": "ExtensionInput" }, "WFSerializationType": "WFTextTokenAttachment" } }
+  },
+  "WFSerializationType": "WFTextTokenString"
+}
+```
+
+The spec builder resolves the `{input}` placeholder to this automatically, in
+text fields and in input fields alike.
 
 ### 3. The consumer — variable inside a string
 

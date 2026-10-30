@@ -36,6 +36,73 @@ except Exception:
 DEFAULT_ICON_COLOR = 4282601983  # dark red, Shortcuts.app default-ish
 
 
+def _repair_token_ranges(val):
+    """Repair a token string's attachment offsets WITHOUT re-associating variables.
+
+    The safe rule: an attachment stays bound to the placeholder it already sits
+    on. Only an attachment whose offset is not a placeholder at all may move, and
+    only when exactly one placeholder is left unclaimed — then the mapping is
+    forced and provably correct.
+
+    Never re-bind attachments positionally. A plist is free to list its range
+    keys in any order, so positional re-binding silently swaps variables: the
+    file imports cleanly and every value lands in the wrong field.
+
+    Returns (repaired: bool, note: str).
+    """
+    s, abr = val.get("string"), val.get("attachmentsByRange")
+    if not isinstance(s, str) or not isinstance(abr, dict):
+        return False, ""
+    offs = lint.placeholder_offsets(s)
+    if not offs or len(abr) != len(offs):
+        return False, ""  # count mismatch: not provable, leave alone
+
+    anchored = {}     # placeholder offset -> ref
+    floating = []     # refs whose offset is not a placeholder
+    for key, ref in abr.items():
+        m = lint.RANGE_RE.match(key)
+        if not m:
+            return False, ""  # unparseable range key: leave alone
+        start = int(m.group(1))
+        if start in offs:
+            if start in anchored:
+                return False, ""  # two refs claim the same placeholder
+            anchored[start] = ref
+        else:
+            floating.append(ref)
+
+    unclaimed = [o for o in offs if o not in anchored]
+    if not floating:
+        # Everything already sits on a placeholder. Only the range *length*
+        # may be wrong, and that is mechanical to repair.
+        changed = False
+        new = {}
+        for key, ref in abr.items():
+            m = lint.RANGE_RE.match(key)
+            start, length = int(m.group(1)), int(m.group(2))
+            if length != 1:
+                new["{%d, 1}" % start] = ref
+                changed = True
+            else:
+                new[key] = ref
+        if changed:
+            val["attachmentsByRange"] = new
+            return True, "range length"
+        return False, ""
+
+    if len(floating) == 1 and len(unclaimed) == 1:
+        # Forced mapping: the only ref that is off a placeholder must belong to
+        # the only placeholder nobody claims.
+        new = {"{%d, 1}" % unclaimed[0]: floating[0]}
+        for off, ref in anchored.items():
+            new["{%d, 1}" % off] = ref
+        val["attachmentsByRange"] = new
+        return True, "offset"
+
+    return False, "ambiguous — %d unanchored attachment(s), %d unclaimed placeholder(s)" % (
+        len(floating), len(unclaimed))
+
+
 def fix(plist, target, min_os):
     out = copy.deepcopy(plist)
     actions = out.get("WFWorkflowActions") or []
@@ -58,15 +125,7 @@ def fix(plist, target, min_os):
             val = tok.get("Value")
             if not isinstance(val, dict):
                 continue
-            s, abr = val.get("string"), val.get("attachmentsByRange")
-            if not isinstance(s, str) or not isinstance(abr, dict):
-                continue
-            offs = lint.placeholder_offsets(s)
-            if len(abr) == len(offs) and offs:
-                new = {}
-                for ref, off in zip(abr.values(), offs):
-                    new["{%d, 1}" % off] = ref
-                val["attachmentsByRange"] = new
+            _repair_token_ranges(val)
     icon = out.get("WFWorkflowIcon")
     if isinstance(icon, dict) and icon.get("WFWorkflowIconStartColor") is None:
         icon["WFWorkflowIconStartColor"] = DEFAULT_ICON_COLOR
