@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [1.0.2] — 2026-10-30
+
+The README was double-encoded and rendered as mojibake on GitHub.
+
+### Fixed
+
+- **README rendered as mojibake.** Every non-ASCII character was corrupted — an em dash showed as `â€"`, the repository-tree box-drawing characters broke, and the `￼` and `÷` examples were mangled. The cause was an edit that read a BOM-less UTF-8 file as Windows-1252 and wrote it back as UTF-8. The file imported fine, linted fine, passed every test and showed a clean diff; only the rendered page exposed the damage.
+
+### Added
+
+- `scripts/check_encoding.py` — verifies every text file is valid UTF-8, has no BOM, uses LF endings, and is not double-encoded. Detection is a round trip: if the text encodes to cp1252 and that byte sequence decodes as UTF-8 into *different* text, the file is double-encoded. A naive "no U+FFFD" check cannot catch this, because double-encoding produces no replacement character at all.
+- A CI job running that check on every push, and a note in `CONTRIBUTING.md`.
+
 ## [1.0.1] — 2026-10-30
 
 Five defects found in a review of `v1.0.0`. All are fixed, each with a regression test.
